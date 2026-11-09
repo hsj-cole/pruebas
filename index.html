@@ -720,7 +720,11 @@ button { cursor:pointer; border:none; background:none; font-family:inherit; }
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 12px rgba(0,0,0,.12);
   flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
 }
+.g4-emoji-card::after { content: '🔊'; position: absolute; right: 6px; bottom: 4px; font-size: 1.1rem; opacity: .75; }
+.g4-emoji-card:active { transform: scale(.96); }
 .g4-answer-row {
   display: flex;
   gap: 8px;
@@ -1326,6 +1330,8 @@ button { cursor:pointer; border:none; background:none; font-family:inherit; }
 .game-topbar { position: relative; }
 
 
+/* ── MENSAJES DE FALLO EN ROJO ── */
+.fb-wrong { color: #b91c1c !important; }
 /* ── ACCESIBILIDAD ── */
 button:focus-visible, [onclick]:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
@@ -1546,7 +1552,7 @@ button:focus-visible, [onclick]:focus-visible { outline: 3px solid #1d4ed8; outl
     <button class="g3-lvl-btn" id="g4lvl-6" onclick="g4SetLevel(6)">6+</button>
   </div>
   <div class="g4-stage">
-    <div class="g4-emoji-card" id="g4-emoji"></div>
+    <div class="g4-emoji-card" id="g4-emoji" role="button" tabindex="0" aria-label="Hear the word" onclick="g4SpeakWord()"></div>
     <div class="g4-answer-row" id="g4-answer-row"></div>
     <div class="g4-feedback" id="g4-feedback"></div>
     <div style="display:flex;gap:10px;align-items:center">
@@ -1911,6 +1917,14 @@ function selectGroup(g) {
   const preview = JP_GROUPS.slice(0,g).flatMap(gr=>gr.letters).join(' · ').toUpperCase();
   document.getElementById('group-letters-preview').textContent = preview;
 }
+
+// Los mensajes que empiezan por ❌ se muestran en rojo
+['g1','g2','g3','g4','g6','g7'].forEach(g => {
+  const el = document.getElementById(g + '-feedback');
+  if(!el) return;
+  new MutationObserver(() => el.classList.toggle('fb-wrong', el.textContent.trim().startsWith('❌')))
+    .observe(el, { childList: true, characterData: true, subtree: true });
+});
 
 // Auto-select group 1 on load
 selectGroup(1);
@@ -2420,7 +2434,12 @@ async function g2Answer(letter) {
   }
   if(sid !== sessionId) return;
 
-  later(()=>g2NextRound(), 1200);
+  if(g2State.mode === 'g2-vc') {
+    // Blend 2 Letters: el niño decide cuándo pasar al siguiente
+    document.getElementById('g2-next-btn').classList.add('show');
+  } else {
+    later(()=>g2NextRound(), 1200);
+  }
 }
 
 // ════════════════════════════════════════════════════════
@@ -2670,14 +2689,12 @@ function g3Answer(chosen, correct) {
     document.getElementById('g3-correct').textContent = g3State.correct;
     fb.textContent = '✅ Well done!';
     btns.forEach(b=>{ if(b.textContent===correct) b.classList.add('correct'); });
-    speak('Well done!', 1);
   } else {
     fb.textContent = '❌ Try again next time!';
     btns.forEach(b=>{
       if(b.textContent===chosen)  b.classList.add('wrong');
       if(b.textContent===correct) b.classList.add('correct');
     });
-    speak('Try again!', 1);
   }
 
   g3State.round++;
@@ -2831,6 +2848,12 @@ function g4Check() {
   } else {
     document.getElementById('g4-next-btn').classList.add('show');
   }
+}
+
+// Toca el dibujo para oír la palabra que hay que escribir
+function g4SpeakWord() {
+  if(!g4State.word) return;
+  speak(g4State.word.toLowerCase());
 }
 
 function g4Hint() {
@@ -3089,7 +3112,7 @@ const G6_ITEMS = {
   's': [{e:'🌞',w:'sun'},{e:'🧦',w:'sock'},{e:'🐍',w:'snake'},{e:'⭐',w:'star'}],
   'a': [{e:'🐜',w:'ant'},{e:'🍎',w:'apple'},{e:'🪓',w:'axe'},{e:'🐊',w:'alligator'}],
   't': [{e:'🐢',w:'turtle'},{e:'🌮',w:'taco'},{e:'🚂',w:'train'},{e:'🎺',w:'trumpet'}],
-  'i': [{e:'🐞',w:'insect'},{e:'🖋️',w:'ink'},{e:'🦎',w:'iguana'}],
+  'i': [{e:'🦎',w:'iguana'},{e:'🖋️',w:'ink'},{e:'🤒',w:'ill'}],
   'p': [{e:'🐷',w:'pig'},{e:'🍕',w:'pizza'},{e:'🎁',w:'present'},{e:'🐧',w:'penguin'},{e:'🍐',w:'pear'},{e:'🥜',w:'peanut'}],
   'n': [{e:'🌃',w:'night'},{e:'📰',w:'newspaper'},{e:'🪺',w:'nest'},{e:'👃',w:'nose'}],
   'ck': [{e:'🐱',w:'cat'},{e:'🎂',w:'cake'},{e:'🌵',w:'cactus'},{e:'🥕',w:'carrot'},{e:'🪁',w:'kite'},{e:'🔑',w:'key'}],
